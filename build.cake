@@ -5,6 +5,7 @@
 #tool "nuget:?package=NUnit.ConsoleRunner&version=3.5.0"
 #tool "nuget:?package=OpenCover&version=4.6.519"
 #tool "nuget:?package=ReportGenerator&version=2.5.0"
+#tool "nuget:?package=XmlDocMarkdown&version=0.3.1"
 
 using LibGit2Sharp;
 
@@ -188,6 +189,8 @@ void CodeGen(bool verify)
 {
 	ExecuteCodeGen(@"fsd\FacilityCore.fsd src\Facility.Core --clean --csproj", verify);
 	ExecuteCodeGen(@"example\ExampleApi.fsd src\Facility.ExampleApi --clean --csproj", verify);
+
+	GenerateDocs("Facility.Core", verify);
 }
 
 void ExecuteCodeGen(string args, bool verify)
@@ -197,6 +200,19 @@ void ExecuteCodeGen(string args, bool verify)
 		throw new InvalidOperationException("Generated code doesn't match; use -target=CodeGen to regenerate.");
 	else if (exitCode != 0)
 		throw new InvalidOperationException($"Code generation failed with exit code {exitCode}.");
+}
+
+void GenerateDocs(string assemblyName, bool verify)
+{
+	if (!verify)
+		CleanDirectories("docs/ArgsReading");
+
+	int exitCode = StartProcess($@"cake\XmlDocMarkdown\tools\XmlDocMarkdown.exe",
+		$@"src\{assemblyName}\bin\{configuration}\{assemblyName}.dll docs\ --source ""https://github.com/{githubOwner}/{githubRepo}/tree/master/src/{assemblyName}""" + (verify ? " --verify" : ""));
+	if (exitCode == 1 && verify)
+		throw new InvalidOperationException("Generated docs don't match; use -target=CodeGen to regenerate.");
+	else if (exitCode != 0)
+		throw new InvalidOperationException($"Docs generation failed with exit code {exitCode}.");
 }
 
 void ExecuteProcess(string exePath, string arguments)
